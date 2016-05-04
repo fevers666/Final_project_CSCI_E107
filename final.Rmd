@@ -1,0 +1,505 @@
+---
+title: "Gemlich_Letter"
+author: "Fred Evers"
+date: "May 1, 2016"
+output: html_document
+---
+# The Gemlich Letter: Hitler or not?
+## Introduction.
+
+This project is focused on a problem of authorship attribution.
+
+Historians of Nazi Germany know that Adolf Hitler's first recorded anti-Semitic statements appear in a letter he wrote to fellow soldier Adolf Gemlich in September 1919. The document spells out Hitler's ideas on why the laws of Germany must be changed to eliminate the rights of Jews, and that they must eventually be 'removed' from the nation. This letter is known as The Gemlich Letter.
+
+The letter was written by Hitler while he was employed by the German army in the volatile period following the collapse of the German Empire at the end of World War I. In October 1918, Germany saw the abdication of Kaiser Wilhelm II, the end of his Prussian military dominated government, and the creation of Germany's first parliamentary government in the Weimar Republic. Even as the new government was being formed in November 1918, revolutions broke in several major cities, and a wide array of political groups and militias battled each other for control and influence amid the social and economic chaos. The army was in tatters, but it held onto the loyalty it had vested in the old regime, especially in light of the nascent revolutionary government in Russia. In Bavaria, the army had a recuperation and rehabilitation center for soldiers, where medical treatment for wounds and exhaustion were mixed with anti-communist training and anti-Semitic ideology. Right-wing publications were common reading material in these training sessions, and Munich had an active right wing press. Among the literature given to the soldiers were issues of a Munich-based weekly publication called _"Auf Gut Deutsch"_, edited by a well known anti-semite named Dietrich Eckart. A frequent contributor to this weekly was Alfred Rosenberg, who was a native of the german-speaking areas of the Baltic regions where the war and the Russian revolution had had a major transformative social impact.
+
+After his own recuperation, Hitler was employed by the army's propaganda unit and charged with infiltrating and reporting on various political groups that were competing for influence in Bavaria. The members of the _"Auf Gut Deutsch"_ circle had recently formed a political party they called the "Deutsche Arbieter Partei" ('German Worker's Party')- the DAP. Hitler initially attended the group's meetings as a spy, but after a short while became deeply involved, and soon became the leader of this group. The name of the party was changed late in 1919 to the "National-Sozialist Deutsche Arbeiters Partei" - NSDAP, from which the abbreviation "Nazi" stems.
+
+As part of his work for the army, Hitler was asked by his superior to write a response to a soldier's letter, in which the soldier had asked why anti-semitism was incorporated into the army's training agenda.
+
+Hitler was not a writer. He was recognized by his army superiors as a gifted speaker, but he did not contribute to journals in these tumultuous times. But the circle of friends associated with _"Auf Gut Deutsch"_ were prolific writers. Alfred Rosenberg wrote prolifically on the positions and ideology of the Nazi Party throughout the entire Nazi era. He was tried for war crimes and executed in 1946 by the Nurembug Tribunals after the second world war.
+
+It is plausible that Adolf Hitler did not in fact write the Gemlich Letter. It is plausible that one of the writers associated with _"Auf Gut Deutsch"_ may have been the author, or equally possible that the Gemlich Letter is comprised of ideas essentially cut and pasted from the pages of _"Auf Gut Deutsch"_ and sent off to Adolf Gemlich as a reply.
+
+### About the data selection and preparation
+
+This project is the first step in an attempt to use machine learning techniques to make plausible attributions as to the authorship of the Gemlich Letter. It is only a first step, and a small one at that, because in order to get a valid sample of the various writers who might have written or contributed to the letter, many more data samples than I have thus far been able to process and prepare must be acquired. At this time, I have only been able to get 4 articles, 2 each, by 2 writers from _"Auf Gut Deutsch"_. The Gemlich Letter, and 2 additional samples (one partial) of Hitler's writing have also been used in this project.
+
+It must be acknowledged that the samples used are by no means random selection of articles from among those in circulation in Germany in 1919. Clearly the authors chosen to populate my corpus were a close circle of writers with very similar concerns. If writers with a different ideology were added to the corpus, the effect would certainly be to introduce a greater 'distance' between the writers and thus reinforce the similarity of the documents present in the current corpus. But the task I have it to see if one of the specific writers in the "Auf Gut Deutsch" circle might have written the Gemlich Letter. In order to investigate that possibility, it is necessary to determine the correlations and distance between a finely selected subset of writers' work. 
+
+The process of acquiring and preparing these samples is time consuming. Issues of _"Auf Gut Deutsch"_ were published almost 100 years ago in Germany, where printing using the traditional 'Faktur' typeface was common. They are not digitized. Some have been scanned and made publicly available by the Google Scholar Project in conjunction with the University of Michigan. Most of the articles used in this project were derived from that source. These scans are put on line as PDF files. In order to digitize them for processing in R, I had to convert the source material into graphic images and process them through an OCR application. I was fortunate to find an open source project devoted to digitizing Fraktur named [OCRopus](https://github.com/tmbdev/ocropy). This software is written in Python, and will only run on certain versions of Linux. I was able to get it to run by creating a VM of an Ubuntu Linux distribution that was configured with Python 2.7.
+
+Through trial and error I found that a PDF, enlarged to 250% and captured as a screenshot produced usable results. This process produced images files containing anywhere from 12 to 20 lines of fraktur print. The captured files look like this:
+![Sample from A. Rosenberg's "Die Judische Zeitfrage"](http://www.cyburth.com/images/judische_zeitfrage_01.png)
+These images were processed by the OCR software and each one produced a short section of text. These texts were very noisy: In many cases it was difficult to grasp their meaning and of course any sense of the author's writing style was lost. So each block of text produced by the OCR progam was copied into MSWord extended with a German language pack for spell-checking, and visually compared to the source screenshot word by word. Each block of text was then copied into a basic text editor and saved in ANSI format. Then, the complete articles were reconstructed by pasting together the blocks.
+
+__Special thanks are due to Maximilian Fürmann who devoted time in the Bavarian State Archives in Munich to personally scan a number of issues of _"Auf Gut Deutsch"_ and the _"Süddeutsche Monatshefte"_ for this project. Although his scans wre not used in this report, they will be very helpful to efforts going forward.__
+
+
+## The Data Samples.
+
+In my initial work with these data, I will create  3 corpi: one that contains The Gemlich Letter only, another that contains articles and letters by Hitler and his early group of writers associated with "Auf Gut Deutsch", and a third corpus that combines the two. 
+
+The reason for creating these separate bodies of data lies in the fact that under some circumstances it is useful to strip out stopwords, create a sparse matrix from the data by eliminating data points exhibiting low frequency and handling various inconvenient features of the data. But there are other times when this paring may not give the best results. It is instructive to see the overall proportion allocated to certain words in relation to the entire corpus, for example. For this reason I will create several different bodies of documents, one that truncates sparse elements in the data, and another that does not.
+
+In the code below you will find the following references:
+*main_corpus
+*gemlichcorp
+*combinedCorpus
+
+Of these three, combinedCorpus has been stripped of stopwords, stemmed and otherwise reduced using the method removeSparseTerms from the 'tm' package. This duplication allows me the flexibility to look at the data in raw as well as prepared form.
+
+```{r}
+dataFiles <- file.path("E:","hal", "tests_ascii") ## update to reflect location..
+gemlichFile <- file.path("E:","hal", "gemlich")
+library(tm)
+library(SnowballC)
+library(wordcloud)  
+library(ggplot2) 
+library(tidyr)
+library(dplyr)
+
+main_corpus <- Corpus(DirSource(dataFiles))
+gemlichcorp  <- Corpus(DirSource(gemlichFile))
+
+# Clean the data in these corpi [Ha Ha! Plural!]
+
+data <- tm_map(main_corpus, removeNumbers)
+data <- tm_map(data, tolower)
+data <- tm_map(data, removePunctuation)
+data <- tm_map(data, stripWhitespace)
+data <- tm_map(data, PlainTextDocument)
+g_data <- tm_map(gemlichcorp, removeNumbers)
+g_data <- tm_map(g_data, tolower)
+g_data <- tm_map(g_data, removePunctuation)
+g_data <- tm_map(g_data, stripWhitespace)
+g_data <- tm_map(g_data, PlainTextDocument)
+
+# create Document Term Matrices for each corpus
+main_dtm <- DocumentTermMatrix(data) # DTM containing the general corpus
+g_dtm <- DocumentTermMatrix(g_data) # The Gemlich Letter DTM
+
+# inspect(data[5]) # Commented to allow brevity in html output. Uncomment to see.
+# inspect(g_data[1])
+```
+
+
+## Exploring the data. 
+
+The tm package contains a method 'findAssocs()' that I will use to examine correleations that exist between the terms in the general corpus DocumentTermMatrix. I am not clear as to the value of this function. By adjusting the corlimit parameter, a greater or smaller number of correlation are discovered and returned as a table. But there is little further information given. It is not possible to determine where the correlations exist between the different documents in the corpus. For this reason I have commented out the reports returned from most of these method calls. To see them, remove the comments.
+
+```{r}
+
+freq <- colSums(as.matrix(main_dtm))   
+length(freq) 
+ord <- order(freq) 
+
+
+freq[head(ord)] 
+freq[tail(ord)] 
+head(table(freq), 20)
+tail(table(freq), 20) 
+
+
+g_freq <- colSums(as.matrix(g_dtm))   
+length(g_freq) 
+g_ord <- order(g_freq) 
+
+
+g_freq[head(g_ord)] 
+g_freq[tail(g_ord)] 
+head(table(g_freq), 20)
+tail(table(g_freq), 20) 
+
+
+
+# ************* Code below commented because in several cases it generated very long lists *********************
+
+
+#findAssocs(main_dtm, c("lüge"), corlimit=0.90) # 'lies'# Commented to allow brevity in html output. Uncomment to see.
+#findAssocs(main_dtm, c("welt"), corlimit=0.96) # 'world' 
+#findAssocs(main_dtm, c("rasse"), corlimit=0.98) # 'race'
+#findAssocs(main_dtm, c("krieg"), corlimit=0.90) # 'war'
+#findAssocs(main_dtm, c("freiheit"), corlimit=0.97) # 'freedom'
+
+
+
+```
+
+Below are some initial charts made from the larger corpus of data. This corpus has been intentionally left with all stopwords in place to allow exploration of the documents in as close to their actual form as possible. Some concessions have been made: numbers, punctuation, and whitespace have been removed, and all words have been turned to lowercase. These actions are helpful in obtaining accurate work frequency measures.
+
+```{r}
+
+# note that here freq uses main_dtm, not a sparse version of the matrix dtms. 
+freq <- sort(colSums(as.matrix(main_dtm)), decreasing=TRUE)   
+# head(freq, 25)
+wf <- data.frame(word=names(freq), freq=freq)   
+# head(wf) 
+
+# Make a bar chart of overall word usage in corpus
+
+p <- ggplot(subset(wf, freq>25), aes(word, freq, fill=word), arrange(freq)) +
+  coord_flip() +
+  geom_bar(stat="identity")   +
+  theme(axis.text.x=element_text(angle=45, hjust=1))  + 
+  labs(title ="Frequency Distribution of Words Used in General Corpus") 
+p
+
+set.seed(142) 
+palette <- brewer.pal(10, "Spectral") 
+wordcloud(names(freq), freq, min.freq=25, rot.per=0.2, colors=palette)
+```
+
+These initial plots are interesting only for one reason: they clearly show the preoccupation of this group of writers with Jews. When set to a minimum frequency of 25, the word 'Juden' appears in the word cloud's third tier, with a frequency close to the singular definite article 'ein', ('a' in English). If the plural 'Juden' were combined with its singular form 'Jude' as is done in the combinedCorpus, it would leap into the second tier of the word cloud, with 'den' and 'das', both definite articles and certainly stopwords. Of the terms appearing on the bar chart, the only nouns are 'Juden' and 'Jude'. I think it is safe to assume that a "Sentiment Analysis" on this data would add nothing to the obvious. Below, a view of the word usage is shown in an image. 
+
+![Term usage distribution from general corpus sorted alphabetically and from top of frequency distribution](http://www.cyburth.com/images/word_count_general.png)
+
+## Exploration of the Gemlich Letter
+Below follows a plot and a wordcloud of the Gemlich letter. The data in this letter is approximately 14% the size of the general corpus of data derived from the other sources. For that reason the min.freq used in the wordcloud and the subset used in the bar plot have been reduced to 4, to approximate the proportion of the size of the raw data examined.
+
+
+```{r}
+
+g_freq <- sort(colSums(as.matrix(g_dtm)), decreasing=TRUE) 
+g_wf <- data.frame(word=names(g_freq), freq=g_freq)   
+head(g_wf) 
+
+p <- ggplot(subset(g_wf, freq>4), aes(word, freq, fill=word), arrange(freq)) +
+  coord_flip() +
+  geom_bar(stat="identity")   +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) + 
+  labs(title ="Frequency Distribution of Words Used in Gemlich Letter")  
+p
+
+palette <- brewer.pal(10, "Spectral") 
+wordcloud(names(g_freq), g_freq, min.freq=4, rot.per=0.2, colors=palette)
+```
+
+Proportionately, Hiter's Gemlich letter displays a wider vocabulary then the other data that was examined as a whole. While again dominated by articles and pronouns, nouns that appear frequently enough to make the cloud are "antisemitismus", deutschen", "kräfte", "nation", "rasse", "streben", and "volks", meaning: 'antisemitism', 'Germans', 'ability/craft/power', 'nation/people', 'race', 'movement (n)/aspire (v)', 'people'.
+
+Both the Gemlich letter and the documents sampled from letters and the periodical "Auf Gut Deutsch" share a preoccupation with Jews. Proportionately, however, the Gemlich letter appears to contain some key words that may suggest additional concerns than just the activity of the Jews.
+
+This contrast should not come as a surprise. The Gemlich letter is a letter written to an individual addressing a specific topic. In particular, it should be noted that it is addressed to a particular soldier to whose patriotism Hitler may appeal. The words in the Gemlich letter suggest an attempt to create a distinction between people. 'Germans', 'nations', 'Jews'.
+
+Below is a second word cloud, this time produced by using a version of the letter that has had stopwords removed, some terms combined and sparse terms removed.-
+```{r, echo=FALSE}
+
+# ? how important are the stop words? For word count of importance, not very. For author analysis, maybe important.
+# Here I create a set of all docs combined so I can do some findAssoc on the Gemlich letter
+combinedCorpus <- c(main_corpus,gemlichcorp)
+combinedData <- tm_map(combinedCorpus,  removeWords, stopwords("german"))
+combinedData <- tm_map(combinedData, stemDocument)
+
+
+for(i in seq(combinedData))   
+   {   
+     combinedData[[i]] <- gsub("dass", "", combinedData[[i]])   
+     combinedData[[i]] <- gsub("das", "", combinedData[[i]])   
+     combinedData[[i]] <- gsub("die", "", combinedData[[i]])    
+     combinedData[[i]] <- gsub("sie", "", combinedData[[i]]) 
+}
+
+# Here I combine a number of terms to concentrate the outcome
+for (i in seq(combinedData))
+{
+combinedData[[i]] <- gsub("jude", "juden", combinedData[[i]])
+combinedData[[i]] <- gsub("judischen", "judische", combinedData[[i]])
+combinedData[[i]] <- gsub("judentum", "judische", combinedData[[i]])
+combinedData[[i]] <- gsub("judentums", "judische", combinedData[[i]])
+combinedData[[i]] <- gsub("judischer", "judische", combinedData[[i]])
+}
+
+combinedData <- tm_map(combinedData, removePunctuation)
+combinedData <- tm_map(combinedData, stripWhitespace)
+combinedData <- tm_map(combinedData, PlainTextDocument)
+
+# create Document Term Matrix for set of all, stemmed, stopped, and cleared of certain terms
+dtmCombined <- DocumentTermMatrix(combinedData)
+
+#findAssocs(dtmCombined, c("lüge"), corlimit=0.90) # 'lies' # Commented to allow brevity in html output. Uncomment to see.
+#findAssocs(dtmCombined, c("welt"), corlimit=0.96) # 'world'
+#findAssocs(dtmCombined, c("rasse"), corlimit=0.98) # 'race'
+#findAssocs(dtmCombined, c("krieg"), corlimit=0.90) # 'war'
+#findAssocs(dtmCombined, c("freiheit"), corlimit=0.97) # 'freedom'
+
+dtmCombined_sparse <-removeSparseTerms(dtmCombined, 0.4) # This makes a matrix that is 40% empty space, maximum. 
+df_combined <- as.data.frame(inspect(dtmCombined_sparse)) 
+df_combined <-`rownames<-`(df_combined,c("ar_jf","ar_rjr","de_djb","de_finte","ah_benefiziat","ah_happ", "ah_gemlich"))
+
+df_combined_tidy <- df_combined %>% mutate(article = row.names(df_combined)) %>% gather(key = word, value = count, 1:37, factor_key=TRUE)
+
+gemlich_sparse <- df_combined_tidy %>% group_by(article) %>% filter(article=="ah_gemlich")
+wordcloud(gemlich_sparse$word, gemlich_sparse$count, min.freq=4, rot.per=0.2, colors=palette)
+```
+Here, the results are starkly evident. The Gemlich Letter is a direct statement to a German soldier in which Hitler indicates that the Jews are a separate race, a people apart, and as such entirely distinct from the German people.
+
+
+I would like to explore the individual letters and articles that comprise the larger corpus. In this case I will use the "combinedCorpus" has had stopwords removed, has been stemmed and sparse terms removed.. 
+
+```{r}
+
+
+# "Die Judiche Zeitfrage" by Rosenberg
+ar_jf_df  <- df_combined_tidy  %>% group_by(article) %>% filter(article=="ar_jf")
+
+p1 <- ggplot(subset(ar_jf_df, freq>20),aes(word,count, fill=word)) +
+  coord_flip() +
+  ggtitle("Die Judiche Zeitfrage by Rosenberg") +
+ geom_bar(stat="identity")
+p1
+
+# "Die Russische-Judiche Revolution" by Rosenberg
+ar_rjr_df <- df_combined_tidy  %>% group_by(article) %>% filter(article=="ar_rjr")
+
+p2 <-  ggplot(subset(ar_rjr_df, freq>20), aes(word,count, fill=word)) +
+  coord_flip() +
+  ggtitle("Die Russische-Judiche Revolution by Rosenberg") +
+ geom_bar(stat="identity")
+p2
+
+#  "Deutsche und Judische Bolschewismus" by Dietrich Eckard
+de_djb_df <- df_combined_tidy  %>% group_by(article) %>% filter(article=="de_djb")
+
+p3  <-  ggplot(subset(de_djb_df, freq>20), aes(word,count, fill=word)) +
+  coord_flip() +
+  ggtitle("Deutsche und Judische Bolschewismus by Dietrich Eckard") +
+ geom_bar(stat="identity")
+p3
+
+# "Die Letzte Finte" by Dietrich Eckard
+de_finte_df <- df_combined_tidy  %>% group_by(article) %>% filter(article=="de_finte")
+p4 <- ggplot(subset(de_finte_df, freq>20), aes(word,count, fill=word)) +
+  coord_flip() +
+  ggtitle("Die Letzte Finte by Dietrich Eckard") +
+ geom_bar(stat="identity")
+p4
+
+# Letter from Adolf Hitler to Happ
+ah_happ_df <- df_combined_tidy  %>% group_by(article) %>% filter(article=="ah_happ")
+p5 <- ggplot(subset(ah_happ_df, freq>4), aes(word,count, fill=word)) +
+  coord_flip() +
+  ggtitle("The Happ letter by Hitler") +
+ geom_bar(stat="identity")
+p5
+
+ah_benefiziat_df <- df_combined_tidy  %>% group_by(article) %>% filter(article=="ah_benefiziat")
+p6 <-  ggplot(subset(ah_benefiziat_df, freq>4), aes(word,count, fill=word)) +
+  coord_flip() +
+  ggtitle("The Benefiziat letter by Hitler") +
+ geom_bar(stat="identity")
+p6
+
+```
+
+### An interesting Correspondence
+
+Looking at the plots above there is a notable convergence in the 4 essays from _"Auf Gut Deutsch"_. All show a strong focus on Jews, . This is to be expected. They were selected because this emphasis is known.
+
+The letters to Ernst Happ and the Catholic priest Benefiziat show a wide divergence from the patterns set in the _"Auf Gut Deutsch"_ articles. The letter to Happ was written in 1915 shortly after Hitler joined the army. It is a letter to a friend by a young soldier and is concerned with the daily life and experiences as a soldier. It contains no references to Jews.
+The letter to Father Benefiziat was written in 
+
+I am struck by the similarity between Hitler's Gemlich Letter and the plot representing word frequency in Dietrich Eckart's essay _"Die Letzte Finte"_ ['The Latest Thing/Ruse/Scam']. Let's generate a wordcloud for each to get a better look.
+
+```{r}
+set.seed(142) 
+wordcloud(gemlich_sparse$word, gemlich_sparse$count, min.freq=4, rot.per=0.2, colors=palette)
+
+wordcloud(de_finte_df$word, de_finte_df$count, min.freq=4, rot.per=0.2, colors=palette)
+```
+
+## Attribution Tests
+
+For a quick attribution test, I have studied the documentation of the Author Attribution package "Stylo". This package provides a condensed way to perform feature extraction, clustering and classification. At the recommendation of Suresh K. Gorakala, author of "Building a Recommendation System with R", I added an additional text to the corpus. The text consisted of 2 chapters scanned and digitized from Otto Furst von Bismark's _"Gedenken und Erinnerungen"_, published in 1915. The work was selected on the basis of the fact that its contents concerned German statesmanship, politics and war in a period relatively close to the era of the Gemlich letter. In the analysis below the following abbreviations are used for the documents
+
+### Clustering
+
+Stylo provides 2 ways for users to interact with the package: via a gui or via the command line interface [aka 'code']. The results returned are the same in either case. The GUI generates a configuration file written to the working directory that used used to pass parameters to the stylo method. The parameters I selected for a Cluster Analysis are given here:
+***
+* corpus.format = "plain"
+* corpus.lang = "German"
+* analyzed.features = "w"
+* ngram.size = 2
+* preserve.case = FALSE
+* encoding = "native.enc"
+* mfw.min = 100
+* mfw.max = 100
+* mfw.incr = 100
+* start.at = 1
+* culling.min = 5
+* culling.max = 0
+* culling.incr = 20
+* mfw.list.cutoff = 5000
+* delete.pronouns = FALSE
+* use.existing.freq.tables = FALSE
+* use.existing.wordlist = FALSE
+* use.custom.list.of.files = FALSE
+* analysis.type = "CA"
+* consensus.strength = 0.5
+* sampling = "no.sampling"
+* sample.size = 10000
+* number.of.samples = 1
+* display.on.screen = TRUE
+* write.pdf.file = FALSE
+* write.jpg.file = FALSE
+* write.svg.file = FALSE
+* write.png.file = FALSE
+* plot.custom.height = 7
+* plot.custom.width = 7
+* plot.font.size = 10
+* plot.line.thickness = 1
+* text.id.on.graphs = "labels"
+* colors.on.graphs = "colors"
+
+
+Initially I chose to have stopwords removed, but the console output indicated that the library for German stopwords was not found.
+
+```{r, eval=FALSE}
+library(stylo)
+gemlich_test = stylo() 
+summary(gemlich_test)
+gemlich_test$distance.table
+
+
+```
+
+.
+
+The cluster analysis run on 4 documents produced the following distance matrix:
+--------------------------------------------
+final distances between each pair of samples 
+--------------------------------------------
+
+                 ah_gemlich ar_russ_jude_rev    bmk_01 de_finte
+ah_gemlich        0.0000000         1.282578 0.9890219 1.198052
+ar_russ_jude_rev  1.2825779         0.000000 1.0358190 1.195081
+bmk_01            0.9890219         1.035819 0.0000000 1.162818
+de_finte          1.1980518         1.195081 1.1628181 0.000000
+
+(total number of rows/columns:  4/4)
+
+Stylo generated the following dendogram:
+![Stylo-generated graphic"](http://www.cyburth.com/images/stylo_cluster_analysis.png)
+
+Based on these results, the Gemlich Letter appears closest to the Bismark sample. Second closest is Eckart's _"Die Letzste Finte"_, with the Rosenberg sample coming in last.
+
+Well, Stylo does not seem to be helping us to trace associations between authors very much. The graph, based on the analysis of Most Frequent Words, places the Gemlich Letter in a quadrant of its own, far from any other. The suspected author/collaborator, Alfred Rosenberg, does not appear related. But neither do Dietrich Eckart or Bismark. The strongest association is between Eckart and Rosenberg, two writers in the _"Auf Gut Deutsch"_ circle.
+
+### Classification
+Using Stylo's classify method and knn value of 7, with Classic Delta distance, the following parameters are present in the configuration file:
+
+* corpus.format="plain"
+* corpus.lang="German"
+* analyzed.features="w"
+* ngram.size=2
+* mfw.min=100
+* mfw.max=100
+* mfw.incr=100
+* start.at=1
+* culling.min=0
+* culling.max=0
+* culling.incr=10
+* mfw.list.cutoff=5000
+* delete.pronouns=FALSE
+* preserve.case=FALSE
+* encoding="native.enc"
+* use.existing.freq.tables=FALSE
+* use.existing.wordlist=FALSE
+* classification.method="knn"
+* culling.of.all.samples=FALSE
+* z.scores.of.all.samples=TRUE
+* reference.wordlist.of.all.samples=FALSE
+* distance.measure="delta"
+* svm.kernel="linear"
+* svm.degree=3
+* svm.coef0=0
+* svm.cost=1
+* k.value=7
+* l.value=0
+* sampling="no.sampling"
+* sample.size=10000
+* number.of.samples=1
+* final.ranking.of.candidates=TRUE
+* how.many.correct.attributions=TRUE
+* number.of.candidates=3
+
+
+
+```{r, eval=FALSE}
+gemlich_test = classify()
+summary(gemlich_test)
+gemlich_test$success.rate
+
+```
+Results reported as follows:
+
+using current directory...
+The subcorpora will be loaded from text files...
+loading ah_benefiziat_1_letter_1927 - Copy.txt	...
+loading ah_benefiziat_1_letter_1927.txt	...
+loading ah_hepp_part - Copy.txt	...
+loading ah_hepp_part.txt	...
+loading ar_jude_frage - Copy.txt	...
+loading ar_jude_frage.txt	...
+loading de_deut_jude_bolsch - Copy.txt	...
+loading de_deut_jude_bolsch.txt	...
+slicing input text into tokens...
+turning words into features, e.g. char n-grams (if applicable)...
+loading ah_gemlich.txt	...
+loading ar_russ_jude_rev.txt	...
+loading bmk_01.txt	...
+loading de_finte.txt	...
+slicing input text into tokens...
+turning words into features, e.g. char n-grams (if applicable)...
+
+
+........
+12274 tokens will be used to create a list of features
+
+processing  8  text samples
+      1      2      3      4      5      6      7      8       
+combining frequencies into a table...
+processing  4  text samples
+      1      2      3      4       
+combining frequencies into a table...
+
+culling @  0 	 available words  5000 
+100  
+
+General attributive success:   1  of  3  ( 33.3 %, sd = NA %)
+
+33.33333 success rate. Pathetic. This is the same as guessing.
+
+## Conclusions
+The project is not able to reach a conclusion based on the effort to date. There are several reasons for this. The first and most important reason is that the data used for samples is too small. Two articles by two different authors compared to a short letter by a third author is very unlikely to yield a definitive attribution. In order to make an attribution with a reasonable degree of confidence it is necessary to sample a much larger data pool. 
+
+Another reason I am not able to reach a conclusion with this data set is that the nature of the samples themselves is problematic. The essays from _"Auf Gut Deutsch"_ are intended for a wide readership, are written at the author's own prompting, occupy a greater 'volume' of printed pages and thus lend themselves to expansive discussion and extrapolation. Letters, however, are intimate communications between individuals. The Happ letter was written to a friend, before Hitler had politics in mind. Its context is more narrowly confined to the associations between the two people involved. The Benefiziat Letter is a public document written not to a friend but to a representative of the Catholic Church at a time when Hitler was the head of a political party that was gaining in importance. The second letter is the speech of a public figure while the first is not. The Gemlich Letter falls somewhere between the two. Hitler wrote it not to an intimate, but to a soldier who had asked for information from a department of the army.
+
+With a very large dataset, differences such as these are not significant. But with the samples currently available the differences far outweigh any similarity that might be present in a truly broad analysis.
+
+Thus at the outset I stated that this project was a first step.
+***
+## Data Sources.
+
+#### Auf Gut Deutsch
+
+The following essays were taken from _"Auf Gut Deutsch"_ retrieved from Harvard Library via Hollis system, scan by University of Michigan. Citations indicate the volume in which the article first appeared.
+* _"Die Russische-Judiche Revolution"_ by Alfred Rosenberg 14 February, 1919  
+* _"Die Judiche Zeitfrage"_ by Alfred Rosenberg 23 October, 1919
+* _"Die Letzte Finte"_ by Dietrich Eckard 29 August, 1919
+* _"Deutsche und Judische Bolschewismus"_ by Dietrich Eckard  16 August, 1919 
+
+#### Letters
+
+* "The Gemlich Letter" by Adolf Hitler 16 September, 1919.   taken from http://www.ns-archiv.de/verfolgung/antisemitismus/hitler/gutachten.php on 4/30/2016
+
+* "Letter to Ernest Hepp" by Adolf Hitler, 5.Februar 1915.  taken from http://www.tenhumbergreinhard.de/taeter-und-mitlaeufer/dokumente-hitler-adolf/hitler-adolf.html retrieved 5/1/16
+
+* "Benefiziat Letter, 1927" from Hoser, Paul. “Hitler Und Die Katholische Kirche. Zwei Briefe Aus Dem Jahr 1927”. Vierteljahrshefte für Zeitgeschichte 42.3 (1994): 473–492. Retrieved from http://www.jstor.org/stable/30195463
+
+#### Resources
+Otto Furst von Bismark. "Gedanken un Erinnerungen" Erster Band. Stuttgart und Berlin 1915
+
+Suresh K. Gorakala. "Building a Recommendation System with R". Packt Publishing 2015
+
+Stylo Tutorial [at] (http://coltekin.net/cagri/courses/lingdiff/tutorial.html)
+
